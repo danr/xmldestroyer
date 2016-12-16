@@ -1,0 +1,1 @@
+include README.rst LICENSE test_data/po.xml test_data/abc.xml
