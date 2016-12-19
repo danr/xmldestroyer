@@ -1,0 +1,14 @@
+w1 = w('Amager', {lemma: "|", pos: "PM"}, [])
+w2 = w('är',     {lemma: "|vara|", pos: "VB"}, [])
+w3 = w('en',     {lemma: "|en|", pos: "DT"}, [])
+w4 = w('dansk'  ,{lemma: "|dansk|", pos: "JJ"}, [])
+w5 = w('ö'      ,{lemma: "|ö|", pos: "NN"}, [])
+w6 = w('.'      ,{lemma: "|", pos: "MAD"}, [])
+
+s1 = sentence(None, {}, [w1, w2, w3, w4, w5, w6])
+s2 = ...
+
+p1 = paragraph(None, {}, [s1, s2, ...])
+
+t1 = text(None, {title: "Amager",
+    url: "http://sv.wikipedia.org/wiki/Amager"}, [p1, p2, ...])

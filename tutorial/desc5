@@ -1,0 +1,6 @@
+w('Amager', {lemma: "|", pos: "PM"}, [])
+w('är',     {lemma: "|vara|", pos: "VB"}, [])
+w('en',     {lemma: "|en|", pos: "DT"}, [])
+w('dansk'  ,{lemma: "|dansk|", pos: "JJ"}, [])
+w('ö'      ,{lemma: "|ö|", pos: "NN"}, [])
+w('.'      ,{lemma: "|", pos: "MAD"}, [])

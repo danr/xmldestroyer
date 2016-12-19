@@ -1,0 +1,6 @@
+w1 = w('Amager', {lemma: "|", pos: "PM"}, [])
+w2 = w('är',     {lemma: "|vara|", pos: "VB"}, [])
+w3 = w('en',     {lemma: "|en|", pos: "DT"}, [])
+w4 = w('dansk'  ,{lemma: "|dansk|", pos: "JJ"}, [])
+w5 = w('ö'      ,{lemma: "|ö|", pos: "NN"}, [])
+w6 = w('.'      ,{lemma: "|", pos: "MAD"}, [])

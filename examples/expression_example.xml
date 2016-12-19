@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<expr>
+  <add>
+    <mul>
+      <add>
+        <num>1</num>
+        <mul>
+          <add>
+            <num>2</num>
+            <num>3</num>
+          </add>
+          <num>4</num>
+        </mul>
+      </add>
+      <num>5</num>
+    </mul>
+    <num>6</num>
+  </add>
+</expr>

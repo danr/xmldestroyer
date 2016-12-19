@@ -10,6 +10,7 @@ import six
 import bz2
 import itertools
 import json
+import inspect
 
 
 def Tag(tag, text, *children, **attribs):
@@ -90,18 +91,19 @@ def iterator(infile,
                 parents.pop()
                 if len(parents) >= depth and (elem.tag in actions or default_action):
                     children = stks.pop()
-                    # TODO, figure out: don't call k if we are below the depth
-                    # (would allow us to yield even with a default action from non-root)
                     k = actions.get(elem.tag, lambda *args: default_action(elem.tag, *args))
                     if tails:
                         res = k(elem.text, elem.tail, elem.attrib, children, dict(parents))
                     else:
                         res = k(elem.text, elem.attrib, children, dict(parents))
-                    if res is not None:
-                        if len(stks) > 0:
-                            stks[-1].append(res)
-                        else:
-                            yield res
+                    if not inspect.isgenerator(res):
+                        res = (res,)
+                    for x in res:
+                        if x is not None:
+                            if len(stks) > 0:
+                                stks[-1].append(x)
+                            else:
+                                yield x
                 elem.clear()
 
 
@@ -275,7 +277,7 @@ def __output_format_from_ext(outfile):
 def __output_format_from_iterator(iterator):
     first = next(iterator)
     if isinstance(first, six.string_types):
-        fmt = 'text'
+        fmt = 'txt'
     elif isinstance(first, ET.Element):
         fmt = 'xml'
     else:
@@ -295,3 +297,4 @@ def __utf8(s):
         return s.encode('utf-8')
     else:
         return s
+

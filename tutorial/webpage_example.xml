@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<html>
+  <head><title>A small webpage</title></head>
+  <body>
+    <h1>Example webpage</h1>
+    <p>This is a webpage without much content.
+    But soon we will add lots of <b>interesting</b> information here.
+    One could say that it is <i>under construction</i>.</p>
+    <h2>Contact details</h2>
+    <p>Contact us via <a href="mailto:example@example.com">email</a>.</p>
+  </body>
+</html>

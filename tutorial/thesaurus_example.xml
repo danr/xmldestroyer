@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Lexicon><feat att="languageCoding" val="ISO 639-3" />
+  <feat att="language" val="swe" />
+    <LexicalEntry>
+      <Lemma />
+      <Sense id="abakus..1">
+        <SenseRelation targets="kulram..1">
+          <feat att="label" val="syn" />
+          <feat att="degree" val="86" />
+          <feat att="source" val="fsl" />
+        </SenseRelation>
+        <SenseRelation targets="kulram..1">
+          <feat att="label" val="syn" />
+          <feat att="degree" val="100" />
+          <feat att="source" val="wiktionary" />
+        </SenseRelation>
+      </Sense>
+    </LexicalEntry>
+    <LexicalEntry>
+      <Lemma />
+      <Sense id="kulram..1">
+        <SenseRelation targets="abakus..1">
+          <feat att="label" val="syn" />
+          <feat att="degree" val="86" />
+          <feat att="source" val="fsl" />
+        </SenseRelation>
+        <SenseRelation targets="abakus..1">
+          <feat att="label" val="syn" />
+          <feat att="degree" val="100" />
+          <feat att="source" val="wiktionary" />
+        </SenseRelation>
+      </Sense>
+    </LexicalEntry>
+    <LexicalEntry>
+      <Lemma />
+      <Sense id="abbreviera..1">
+        <SenseRelation targets="förkorta..1">
+          <feat att="label" val="syn" />
+          <feat att="degree" val="100" />
+          <feat att="source" val="fsl" />
+        </SenseRelation>
+      </Sense>
+    </LexicalEntry>
+    <LexicalEntry>
+      <Lemma />
+      <Sense id="förkorta..1">
+        <SenseRelation targets="abbreviera..1">
+          <feat att="label" val="syn" />
+          <feat att="degree" val="100" />
+          <feat att="source" val="fsl" />
+        </SenseRelation>
+        <SenseRelation targets="minska..1">
+          <feat att="label" val="iu" />
+          <feat att="degree" val="100" />
+          <feat att="source" val="pwn" />
+        </SenseRelation>
+      </Sense>
+    </LexicalEntry>
+    <LexicalEntry>
+      <Lemma />
+      <Sense id="abdikera..1">
+        <SenseRelation targets="avgå..1">
+          <feat att="label" val="syn" />
+          <feat att="degree" val="80" />
+          <feat att="source" val="fsl" />
+        </SenseRelation>
+        <SenseRelation targets="lämna..2">
+          <feat att="label" val="syn" />
+          <feat att="degree" val="80" />
+          <feat att="source" val="dfsl" />
+        </SenseRelation>
+        <SenseRelation targets="sluta..1">
+          <feat att="label" val="syn" />
+          <feat att="degree" val="80" />
+          <feat att="source" val="dfsl" />
+        </SenseRelation>
+        <SenseRelation targets="avsäga..1">
+          <feat att="label" val="syn" />
+          <feat att="degree" val="100" />
+          <feat att="source" val="wiktionary" />
+        </SenseRelation>
+        <SenseRelation targets="avträda..1">
+          <feat att="label" val="syn" />
+          <feat att="degree" val="100" />
+          <feat att="source" val="wiktionary" />
+        </SenseRelation>
+        <SenseRelation targets="frånträda..1">
+          <feat att="label" val="syn" />
+          <feat att="degree" val="100" />
+          <feat att="source" val="wiktionary" />
+        </SenseRelation>
+      </Sense>
+    </LexicalEntry>
+    <LexicalEntry>
+      <Lemma />
+      <Sense id="avgå..1">
+        <SenseRelation targets="abdikera..1">
+          <feat att="label" val="syn" />
+          <feat att="degree" val="80" />
+          <feat att="source" val="fsl" />
+        </SenseRelation>
+        <SenseRelation targets="lämna..2">
+          <feat att="label" val="syn" />
+          <feat att="degree" val="80" />
+          <feat att="source" val="fsl" />
+        </SenseRelation>
+        <SenseRelation targets="sluta..1">
+          <feat att="label" val="syn" />
+          <feat att="degree" val="80" />
+          <feat att="source" val="fsl" />
+        </SenseRelation>
+        <SenseRelation targets="avsluta..1">
+          <feat att="label" val="syn" />
+          <feat att="degree" val="62" />
+          <feat att="source" val="dfsl" />
+        </SenseRelation>
+        <SenseRelation targets="överge..1">
+          <feat att="label" val="syn" />
+          <feat att="degree" val="80" />
+          <feat att="source" val="dfsl" />
+        </SenseRelation>
+        <SenseRelation targets="pensionera..1">
+          <feat att="label" val="ui" />
+          <feat att="degree" val="100" />
+          <feat att="source" val="pwn" />
+        </SenseRelation>
+      </Sense>
+    </LexicalEntry>
+    <LexicalEntry>
+      <Lemma />
+      <Sense id="abnorm..1">
+        <SenseRelation targets="missbildad..1">
+          <feat att="label" val="syn" />
+          <feat att="degree" val="64" />
+          <feat att="source" val="fsl" />
+        </SenseRelation>
+        <SenseRelation targets="onaturlig..1">
+          <feat att="label" val="syn" />
+          <feat att="degree" val="64" />
+          <feat att="source" val="fsl" />
+        </SenseRelation>
+        <SenseRelation targets="onormal..1">
+          <feat att="label" val="syn" />
+          <feat att="degree" val="64" />
+          <feat att="source" val="fsl" />
+        </SenseRelation>
+        <SenseRelation targets="avvikande..1">
+          <feat att="label" val="syn" />
+          <feat att="degree" val="64" />
+          <feat att="source" val="dfsl" />
+        </SenseRelation>
+        <SenseRelation targets="tillgjord..1">
+          <feat att="label" val="syn" />
+          <feat att="degree" val="64" />
+          <feat att="source" val="dfsl" />
+        </SenseRelation>
+        <SenseRelation targets="vanskapt..1">
+          <feat att="label" val="syn" />
+          <feat att="degree" val="64" />
+          <feat att="source" val="dfsl" />
+        </SenseRelation>
+      </Sense>
+    </LexicalEntry>
+    <LexicalEntry>
+      <Lemma />
+      <Sense id="missbildad..1">
+        <SenseRelation targets="abnorm..1">
+          <feat att="label" val="syn" />
+          <feat att="degree" val="64" />
+          <feat att="source" val="fsl" />
+        </SenseRelation>
+        <SenseRelation targets="vanskapt..1">
+          <feat att="label" val="syn" />
+          <feat att="degree" val="86" />
+          <feat att="source" val="fsl" />
+        </SenseRelation>
+        <SenseRelation targets="onaturlig..1">
+          <feat att="label" val="syn" />
+          <feat att="degree" val="64" />
+          <feat att="source" val="dfsl" />
+        </SenseRelation>
+        <SenseRelation targets="onormal..1">
+          <feat att="label" val="syn" />
+          <feat att="degree" val="64" />
+          <feat att="source" val="dfsl" />
+        </SenseRelation>
+      </Sense>
+    </LexicalEntry>
+    </Lexicon>
