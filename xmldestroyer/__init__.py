@@ -8,9 +8,12 @@ Bottom-up transformation of XML into XML, JSON or text.
 import xml.etree.cElementTree as ET
 import six
 import bz2
+import gzip
 import itertools
 import json
 import inspect
+from contextlib import contextmanager
+from functools import wraps
 
 
 def Tag(tag, text, *children, **attribs):
@@ -28,74 +31,121 @@ def TagWithTail(tag, text, tail, *children, **attribs):
     return elem
 
 
-def iterator(infile,
-             actions={},
-             default_action=None,
-             input_compression='ext',
-             tails=False,
-             depth=1,
-             **more_actions):
+class Element(object):
+
     """
-    Transforms an XML document bottom-up and returns an iterator of the results.
+    This object corresponds to a tag from an XML document.  The XML document's
+    children cannot be accessed, but the processed children are available.
+    It has the following attributes:
+
+    - ``tag``: the tag name
+    - ``text``: the text inside the tag
+    - ``tail``: the text directly after the tag end until the next tag begins
+    - ``attrib``: its attribute dictionary
+    - ``children``: the _processed_ children (not the children in the XML.)
+    - ``trail``: the trail of the node's ancestors, a list of Element objects,
+       from youngest (most immediate) to oldest (the root).
+       They have no children since they are not yet processed.
+    - ``parent``: a convenience view: the immediate parent from the ``trail``
+    - ``traildict``: another convenience: the ``trail`` list as a dict,
+      keyed by tag names, duplicates removed (youngest survives).
+
+    Further, the attributes of the tag are also attributes of this object as
+    long as they do not collide with the attributes above.
+    """
+
+    def __init__(self, elem, trail):
+        protected = set(('text', 'tail', 'children', '_finalize'))
+        for k, v in six.iteritems(elem.attrib):
+            if k not in protected:
+                self.__dict__[k] = v
+        parent = trail[0] if trail else None
+        traildict = dict(((elem.tag, elem) for elem in trail[::-1]))
+        self.__dict__.update(tag=elem.tag,
+                             attrib=elem.attrib,
+                             trail=trail,
+                             parent=parent,
+                             traildict=traildict)
+
+    def _finalize(self, text, tail, children):
+        self.__dict__.update(text=text or '',
+                             tail=tail or '',
+                             children=children or [])
+
+    def __setattr__(self, *_):
+        raise AttributeError("Immutable object")
+
+
+def iterate(input,
+            actions={},
+            default_action=None,
+            input_compression='ext',
+            depth=1,
+            parameter_puns=True,
+            **more_actions):
+    """
+    Transforms an XML document bottom-up, returning an iterator of the results.
 
     Parameters
     ----------
-    infile : filename
-        The input filename.
+    input : fileobject or filename
+        A filename of an xml document or a file object.
+        The file can be compressed, see 'input_compression'.
     actions : dictionary
-        Actions to execute when processing a tag.
-        When encountering a tag, if a mapping with the
-        same key as the tag name is found in this dictionary,
-        it is executed. The function takes four arguments:
-            ``text``, ``attrib``, ``children``, ``trail``
-        where
-            - ``text``: the tag's textual content,
-            - ``attrib``: its attribute dictionary
-            - ``children``: the _processed_ children (if any)
-              note that is not the children in the XML document
-            - ``trail``: a trail of the node's ancestors. this is a list
-              of ``(tag_name, attrib)`` tuples, where ``tag_name`` is the
-              name of the ancestor's tag and ``attrib`` its attribute dictionary.
+        Actions to execute when processing a tag.  Keys are tag names:
+        if a function for the current tag exists it is executed.
 
-        Exception: if ``tails`` = ``True``, another argument is provided after ``text``,
-        namely ``tail`` which is the tail text content.
+        If ``parameter_puns`` is ``False``, the function
+        is passed one argument: a 'xmldestroyer.Element' object.
+        If ``parameter_puns`` is ``True``, which is the default,
+        the function's argument names are inspected and all attributes
+        from 'xmldestroyer.Element' with these names are passed.
+
+        The returned value from the actions is passed to nearest parent
+        with an action function. If there is none, it is yielded.
+        If the action returns a genererator or is a generator function,
+        all generated elements are passed.
+
+        Returned or yielded ``None`` are skipped.
     default_action : function
-        This function, if given, is executed at every tag which is not handled
-        by other actions, and is within the depth. The signature of this function
-        is the same as for actions, but with the exception that it gets a first
-        argument which is the name of the tag.
+        If this function is given it is is executed at every tag not handled
+        by other actions and is within the depth.
     input_compression : 'ext', 'bz2', 'gz' or 'none'
         Compression used on the input file. If `ext` then the file extension
         determines between `bz2` and `gz`.
-    tails : boolean
-        If the action handlers are also passed the tail text contents.
-        This is the text from the end of the tag to the start of the next tag.
     depth : int
         The xml nesting depth in the document to yield results from.
+        No actions are executed before this depth.
+    parameter_puns : boolean
+        Default is True. See documentation for the 'actions' parameter.
     **more_actions : dictionary
         Works the same as the ``actions`` dictionary.
     """
 
     actions = dict(actions, **more_actions)
+    if parameter_puns:
+        actions = {k: __parameter_puns_decorator(v)
+                   for k, v in six.iteritems(actions)}
+        if default_action:
+            default_action = __parameter_puns_decorator(default_action)
+
+    def has_action(tag):
+        return tag in actions or default_action
 
     stks = []
-    parents = []
-    with __compressed_open(infile, 'r', input_compression) as f:
+    trail = []
+    with __compressed_open(input, 'r', input_compression) as f:
         context = iter(ET.iterparse(f, events=("start", "end")))
         for evt, elem in context:
             if evt == 'start':
-                parents.append((elem.tag, elem))
-                if len(parents) > depth and (elem.tag in actions or default_action):
+                trail.append(Element(elem, trail[::-1]))
+                if len(trail) > depth and has_action(elem.tag):
                     stks.append([])
             elif evt == 'end':
-                parents.pop()
-                if len(parents) >= depth and (elem.tag in actions or default_action):
-                    children = stks.pop()
-                    k = actions.get(elem.tag, lambda *args: default_action(elem.tag, *args))
-                    if tails:
-                        res = k(elem.text, elem.tail, elem.attrib, children, dict(parents))
-                    else:
-                        res = k(elem.text, elem.attrib, children, dict(parents))
+                element = trail.pop()
+                if len(trail) >= depth and has_action(elem.tag):
+                    element._finalize(elem.text, elem.tail, stks.pop())
+                    res = actions.get(elem.tag, default_action)(element)
                     if not inspect.isgenerator(res):
                         res = (res,)
                     for x in res:
@@ -107,67 +157,63 @@ def iterator(infile,
                 elem.clear()
 
 
-def write_iterator(iterator, outfile,
-                   output_format='ext',
+def write_iterator(iterator, output,
+                   output_format='auto',
                    output_compression='ext',
-                   limit=None,
-                   top_action=None,
-                   outputs='many',
+                   many_outputs=True,
                    text_sep='\n',
+                   text_end='\n',
                    json_indent=4,
                    xml_root='root'):
     """
-    Writes an iterator as returned from `xmldestroyer.iterator` to disk.
+    Writes an iterator as returned from `xmldestroyer.iterate` to disk.
 
     Parameters
     ----------
     iterator : iterator
-        An iterator that yields strings, ElementTree nodes or python
-        objects that can be json-serialised.
-    outfile : filename
-        File to store the result.
-    output_format : 'ext', 'auto', 'text', 'xml', 'json'
-        Output format to use. When `ext` is given, it looks at the
-        extension of the outfile (with `txt` for `text`).
-        With `auto`, it looks at the type of the first element of the iterator.
+        An iterator of strings, ElementTree nodes or JSON objects.
+    output : filename
+        File or file object to store the result.
+    output_format : 'auto', 'text', 'xml', 'json'
+        Output format to use.
+        Determined by the type of the first element of the iterator if `auto`.
+        This is the default.
     output_compression : 'ext', 'bz2', 'gz', 'none'
-        Compression to use on the output. If `ext` is given it is determined
-        by the filename.
-    limit : int
-        An optional limit for how many results from the iterator to write.
-    top_action : function
-        Function that is executed on all the elemnets from the iterator
-        before they are written, if given.
-    outputs : 'many', 'one'
-        If this is set to 'many' (which is the default), the
-        This affects the XML and JSON outputs.
-        output is wrapped in a tag (given by ``xml_root``) for XML output,
-        and is written as an array for JSON output.
+        Compression to use on the output.
+        Determined by the filename extension of output if `ext`.
+        This is the default.
+    many_outputs : boolean
+        For XML and JSON outputs only.
+        By default this is true and has the following effects:
+        - For XML output, an extra root tag wraps all output.
+          The tag name is given by given by ``xml_root``.
+        - For JSON output, an array wraps all output.
     text_sep : string
         For text output: separator between elements from the iterator.
+    text_end : string
+        For text output: written after all elements.
     json_indent : int
-        For JSON output: indentation level. Set to None or non-positive for
-        no pretty-printing.
+        For JSON output: indentation level.
+        Set to None or non-positive for no pretty-printing.
     xml_root : string
         For XML output: The name of the root tag.
     """
 
-    if output_format == 'text':
-        output_format = 'txt'
-    elif output_format == 'ext':
-        output_format = __output_format_from_ext(outfile)
-    elif output_format == 'auto':
+    if output_format == 'auto':
         output_format, iterator = __output_format_from_iterator(iterator)
 
-    if output_format not in ['txt', 'xml', 'json']:
+    if output_format not in ['text', 'xml', 'json']:
         raise ValueError("Invalid output format: " + output_format)
 
-    if outputs == 'many' and output_format == 'xml':
+    if many_outputs and output_format == 'xml':
         header = '<?xml version="1.0" encoding="UTF-8"?>\n<' + xml_root + '>'
         footer = '</' + xml_root + '>\n'
-    elif outputs == 'many' and output_format == 'json':
+    elif many_outputs and output_format == 'json':
         header = '['
         footer = '\n]'
+    elif output_format == 'text':
+        header = ''
+        footer = text_end
     else:
         header = footer = ''
 
@@ -175,86 +221,82 @@ def write_iterator(iterator, outfile,
     footer = __utf8(footer)
     text_sep = __utf8(text_sep)
 
-    if isinstance(limit, six.string_types) and str.isdigit(limit):
-        limit = int(limit)
-
-    with __compressed_open(outfile, 'wb', output_compression) as of:
+    with __compressed_open(output, 'wb', output_compression) as of:
 
         of.write(header)
 
-        for first, x in __tag_first(itertools.islice(iterator, 0, limit)):
-            if top_action:
-                x = top_action(x)
-            if output_format == 'txt':
-                of.write(__utf8(x) + text_sep)
+        for first, x in __tag_first(iterator):
+            if output_format == 'text':
+                if not first:
+                    of.write(text_sep)
+                of.write(__utf8(x))
             elif output_format == 'xml':
-                ET.ElementTree(x).write(of, encoding='utf-8', xml_declaration=False)
+                t = ET.ElementTree(x)
+                t.write(of, encoding='utf-8', xml_declaration=False)
                 x.clear()
             elif output_format == 'json':
-                if outputs == 'many' and not first:
+                if many_outputs and not first:
                     of.write(',\n')
                 of.write(__utf8(json.dumps(x, indent=json_indent)))
 
         of.write(footer)
 
 
-def xd(infile, outfile,
-       actions={},
-       default_action=None,
-       output_format='ext',
-       input_compression='ext',
-       output_compression='ext',
-       limit=None,
-       top_action=None,
-       tails=False,
-       depth=1,
-       outputs='many',
-       text_sep='\n',
-       json_indent=4,
-       xml_root='root',
-       **more_actions):
+def xd(input, output, actions={}, limit=None, top_action=None, **args):
     """
     Transforms an XML document bottom-up and writes it to a file.
-    Parameters are the same as for `xmldestroyer.iterator` and
+    Parameters are inherited from `xmldestroyer.iterate` and
     `xmldestroyer.write_iterator`.
 
     Parameters
     ----------
+    limit : int
+        If this limit is given then only so many elements are extracted from
+        the iterator.
+    top_action : function
+        If this functions is given then it is executed on all elements
+        of the iterator before they are written.
     """
 
-    write_iterator(
-        iterator(
-            infile=infile,
-            input_compression=input_compression,
-            actions=actions,
-            default_action=default_action,
-            tails=tails,
-            depth=depth,
-            **more_actions),
-        outfile=outfile,
-        output_format=output_format,
-        output_compression=output_compression,
-        limit=limit,
-        top_action=top_action,
-        outputs=outputs,
-        text_sep=text_sep,
-        json_indent=4,
-        xml_root=xml_root)
+    iterate_args = {}
+    write_args = {}
+    write_params = __args_of(write_iterator)
+
+    for k, v in six.iteritems(args):
+        if k in write_params:
+            write_args[k] = v
+        else:
+            iterate_args[k] = v
+
+    iterator = iterate(input, actions, **iterate_args)
+
+    if limit is not None:
+        iterator = itertools.islice(iterator, 0, limit)
+
+    if top_action:
+        iterator = map(top_action, iterator)
+
+    write_iterator(iterator, output, **write_args)
 
 
 def __parameters(fn):
     return fn.__doc__.split("Parameters")[1].split("----------")[1]
 
 
-xd.__doc__ += __parameters(iterator) + __parameters(write_iterator)
+xd.__doc__ += __parameters(iterate) + __parameters(write_iterator)
 
 
 # Utilities
 
 
 def __compressed_open(filename, mode, compression='ext'):
+    if hasattr(filename, 'read') or hasattr(filename, 'write'):
+        @contextmanager
+        def ignore_enter_and_exit(): yield filename
+        return ignore_enter_and_exit()
+
     def match(ext):
-        if compression in ['ext']:
+        if compression == 'ext':
             return filename.endswith('.' + ext)
         else:
             return compression == ext
@@ -266,23 +308,16 @@ def __compressed_open(filename, mode, compression='ext'):
         return open(filename, mode)
 
 
-def __output_format_from_ext(outfile):
-    for ext in outfile.split('.')[1:][::-1]:
-        for fmt in ['xml', 'json', 'txt']:
-            if ext == fmt:
-                return fmt
-    raise ValueError("Cannot determine output format from the filename " + outfile)
-
-
 def __output_format_from_iterator(iterator):
     first = next(iterator)
     if isinstance(first, six.string_types):
-        fmt = 'txt'
-    elif isinstance(first, ET.Element):
+        fmt = 'text'
+    elif type(first) == type(Tag('dummy', None)):
+        # ET.Element in python2 does not support isinstance
         fmt = 'xml'
     else:
         fmt = 'json'
-    return fmt, itertools.chain([first], iterator)
+    return fmt, itertools.chain((first,), iterator)
 
 
 def __tag_first(iterator):
@@ -298,3 +333,26 @@ def __utf8(s):
     else:
         return s
 
+
+def __args_of(f):
+    return inspect.getargspec(f).args
+
+
+def __parameter_puns_decorator(f):
+    if not inspect.isfunction(f):
+        raise TypeError('Not a function: ' + repr(f))
+    params = __args_of(f)
+
+    def arguments(elem):
+        return (getattr(elem, x) for x in params)
+    if inspect.isgeneratorfunction(f):
+        @wraps(f)
+        def wrap(elem):
+            for x in f(*arguments(elem)):
+                yield x
+        return wrap
+    else:
+        @wraps(f)
+        def wrap(elem):
+            return f(*arguments(elem))
+        return wrap

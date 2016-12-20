@@ -13,7 +13,7 @@ from nose.tools import eq_, with_setup
 
 
 def po_str_iter(actions, expected):
-    out = '\n'.join(xd.iterator('test_data/po.xml', actions)) + '\n'
+    out = '\n'.join(xd.iterate('test_data/po.xml', actions)) + '\n'
     eq_(out, expected)
 
 
@@ -31,25 +31,25 @@ def po_str(actions, expected):
 
 
 def test_po_names():
-    def name(text, attrs, children, parents):
+    def name(text):
         return text
     for u in po_str(dict(name=name), "Alice Smith\nRobert Smith\n"):
         yield u
 
 
 def test_po_partNum():
-    def item(text, attrs, children, parents):
-        return attrs['partNum']
+    def item(partNum):
+        return partNum
     for u in po_str(dict(item=item), "872-AA\n926-AA\n"):
         yield u
 
 
 
 def test_po_partNum_productName():
-    def item(text, attrs, children, parents):
-        return children[0] + ',' + attrs['partNum']
+    def item(children, partNum):
+        return children[0] + ',' + partNum
 
-    def productName(text, attrs, children, parents):
+    def productName(text):
         return text
 
     for u in po_str(dict(item=item, productName=productName),
@@ -66,24 +66,26 @@ def __pretty_xml(node):
 
 
 def test_identity():
-    def default_action(tag, text, tail, attrs, children, _parents):
-        return xd.TagWithTail(tag, text, tail, *children, **attrs)
+    def default_action(elem):
+        return xd.TagWithTail(elem.tag, elem.text, elem.tail,
+                              *elem.children, **elem.attrib)
 
     original = __pretty_xmlfile('test_data/po.xml')
-    iterator = xd.iterator('test_data/po.xml', tails=True, depth=0,
-                           default_action=default_action)
-    roundtrip = __pretty_xml(next(iterator))
+    iterate = xd.iterate('test_data/po.xml', depth=0,
+                         parameter_puns=False,
+                         default_action=default_action)
+    roundtrip = __pretty_xml(next(iterate))
     eq_(roundtrip, original)
 
 
 @with_setup(None, lambda: os.remove('test_data/po_tmp.xml'))
 def test_identity_file():
-    def default_action(tag, text, tail, attrs, children, _parents):
-        return xd.TagWithTail(tag, text, tail, *children, **attrs)
+    def default_action(tag, text, tail, children, attrib):
+        return xd.TagWithTail(tag, text, tail, *children, **attrib)
 
     original = __pretty_xmlfile('test_data/po.xml')
     xd.xd('test_data/po.xml', 'test_data/po_tmp.xml',
-          tails=True, depth=0, outputs='one',
+          depth=0, many_outputs=False,
           default_action=default_action)
     roundtrip = __pretty_xmlfile('test_data/po_tmp.xml')
     eq_(roundtrip, original)
@@ -91,7 +93,7 @@ def test_identity_file():
 
 @with_setup(None, lambda: os.remove('test_data/tmp.txt'))
 def test_abc_unicode_text():
-    def abc(text, attrs, children, parents):
+    def abc(text):
         return text
 
     xd.xd('test_data/abc.xml', 'test_data/tmp.txt', abc=abc, depth=0)
@@ -102,13 +104,13 @@ def test_abc_unicode_text():
 
 @with_setup(None, lambda: os.remove('test_data/tmp.xml'))
 def test_abc_unicode_xml():
-    def abc(text, attrs, children, parents):
+    def abc(text):
         return xd.Tag('abc', text)
 
     xd.xd(
         'test_data/abc.xml',
         'test_data/tmp.xml',
-        outputs='one',
+        many_outputs=False,
         abc=abc,
         depth=0)
 
@@ -120,10 +122,14 @@ def test_abc_unicode_xml():
 
 @with_setup(None, lambda: os.remove('test_data/tmp.json'))
 def test_abc_unicode_json():
-    def abc(text, attrs, children, parents):
+    def abc(text):
         return text
 
-    xd.xd('test_data/abc.xml', 'test_data/tmp.json', outputs='one', abc=abc, depth=0)
+    xd.xd('test_data/abc.xml', 'test_data/tmp.json',
+          output_format='json',
+          many_outputs=False,
+          depth=0,
+          abc=abc)
 
     with codecs.open('test_data/tmp.json', 'r', encoding='utf-8') as f:
         eq_(u'åäö', json.load(f))
@@ -134,14 +140,14 @@ def my_xml_to_dict(xmlfile):
     An attempt at reimplementing xmltodict.
     But it's not very well specified.
     """
-    def default_action(tag, text, attrs, children, _parents):
-        if not attrs and not children:
+    def default_action(tag, text, attrib, children):
+        if not attrib and not children:
             d = OrderedDict()
             d[tag]=text
             return d
         else:
             content = OrderedDict()
-            for k, v in six.iteritems(attrs):
+            for k, v in six.iteritems(attrib):
                 content['@'+k] = v
             if text and not text.isspace():
                 content['#text'] = text
@@ -156,8 +162,7 @@ def my_xml_to_dict(xmlfile):
                     else:
                         content[k] = v
             return {tag:content}
-    return xd.iterator(xmlfile, default_action=default_action, depth=0)
-
+    return xd.iterate(xmlfile, default_action=default_action, depth=0)
 
 
 def test_xml_to_dict():

@@ -1,16 +1,16 @@
+# -*- coding: utf-8 -*-
 import sys
 import xmldestroyer as xd
 
 def sentences(infile, outfile):
-    def w(text, attrib, children, trail):
+    def w(text):
         return text
 
-    def sentence(text, attrib, children, trail):
+    def sentence(children):
         return ' '.join(children)
 
-    def text(text, attrib, children, trail):
-        header = ' '.join(attrib[k] for k in ['title', 'url'])
-        return header + '\n' + '\n'.join(children) + '\n\n'
+    def text(children, title, url):
+        return title + ' ' + url + '\n' + '\n'.join(children) + '\n\n'
 
     xd.xd(infile, outfile, w=w, sentence=sentence, text=text)
 
