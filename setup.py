@@ -2,7 +2,7 @@
 from setuptools import setup
 
 setup(name='xmldestroyer',
-      version='0.1',
+      version='0.2',
       description='Bottom-up transformation of XML into python generators, XML, JSON or text.',
       long_description=open('README.rst').read(),
       classifiers=[
